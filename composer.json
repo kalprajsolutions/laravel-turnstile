@@ -1,0 +1,33 @@
+{
+    "name": "kalprajsolutions/laravel-turnstile",
+    "version": "1.0.0",
+    "description": "A Laravel Blade component for Cloudflare Turnstile CAPTCHA integration",
+    "type": "library",
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "Kalpraj Solutions",
+            "email": "support@kalprajsolutions.com"
+        }
+    ],
+    "require": {
+        "php": "^8.1",
+        "laravel/framework": "^8.0|^9.0|^10.0|^11.0|^12.0"
+    },
+    "autoload": {
+        "psr-4": {
+            "KalprajSolutions\\LaravelTurnstile\\": "src/",
+            "KalprajSolutions\\LaravelTurnstile\\Facades\\": "src/Facades/"
+        }
+    },
+    "extra": {
+        "laravel": {
+            "providers": [
+                "KalprajSolutions\\LaravelTurnstile\\TurnstileServiceProvider"
+            ],
+            "facades": {
+                "Turnstile": "KalprajSolutions\\LaravelTurnstile\\Facades\\Turnstile"
+            }
+        }
+    }
+}
