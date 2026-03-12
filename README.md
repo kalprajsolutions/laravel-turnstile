@@ -1,3 +1,12 @@
+<div align="left">
+    <a href="https://kalprajsolutions.com/?utm_source=github&utm_medium=banner&utm_campaign=laravel-turnstile">
+      <picture>
+        <source media="(prefers-color-scheme: dark)" srcset="https://github.com/Pushkraj19/Pushkraj19/blob/d72ff5e2eb7299546cd8348c25fd835a39becce0/laravel-turnstile.png">
+        <img alt="Logo for Laravel Wordpress CDA" src="https://github.com/Pushkraj19/Pushkraj19/blob/d72ff5e2eb7299546cd8348c25fd835a39becce0/laravel-turnstile.png">
+      </picture>
+    </a>
+</div>
+
 # Laravel Turnstile
 
 [![License](https://img.shields.io/packagist/l/kalprajsolutions/laravel-turnstile.svg)](https://packagist.org/packages/kalprajsolutions/laravel-turnstile)
