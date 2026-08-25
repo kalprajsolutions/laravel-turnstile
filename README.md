@@ -6,7 +6,6 @@
       </picture>
     </a>
 </div>
-
 # Laravel Turnstile
 
 [![License](https://img.shields.io/packagist/l/kalprajsolutions/laravel-turnstile.svg)](https://packagist.org/packages/kalprajsolutions/laravel-turnstile)
@@ -173,37 +172,34 @@ function onTurnstileSuccess(token) {
 </script>
 ```
 
-### Livewire Integration
+### Livewire Integration (Standard Mode)
 
-For Livewire components, use the callback to bind the token to a Livewire property:
+For Livewire components in standard mode, use the callback to bind the token to a Livewire property. Define the callback inside a `@script` block so it has access to `$wire` (a plain `<script>` tag cannot use `@this`/`$wire`):
 
 ```blade
 <div>
     <form wire:submit.prevent="submitForm">
         <input type="email" wire:model="email" required>
-        
-        <x-turnstile 
-            callback="onTurnstileSuccess" 
-            :button-ids="['submit-btn']"
-        />
-        
+
+        <div wire:ignore>
+            <x-turnstile callback="onTurnstileSuccess" :button-ids="['submit-btn']" />
+        </div>
+
         <button type="submit" id="submit-btn">Submit</button>
     </form>
 
+    @script
     <script>
-    function onTurnstileSuccess(token) {
-        console.log('Verification successful:', token);
-        // Bind token to Livewire
-        @this.set('turnstileToken', token);
-    }
+        window.onTurnstileSuccess = (token) => {
+            $wire.set('turnstileToken', token);
+        };
     </script>
+    @endscript
 </div>
 ```
 
 ```php
-<?php
-
-namespace App\Http\Livewire;
+namespace App\Livewire;
 
 use Livewire\Component;
 
@@ -228,6 +224,99 @@ class ContactForm extends Component
     }
 }
 ```
+
+> Wrap the component in a `wire:ignore` div so Livewire's DOM morphing does not destroy the rendered widget when the component re-renders.
+
+### Livewire Integration (Lazy Mode)
+
+Lazy mode pairs naturally with Livewire: the widget stays hidden until the first tokenless submit, and the token is delivered to your callback, which then runs the action. **When a `callback` is provided, the package never submits the form natively** — the callback fully owns what happens next. This is what makes lazy mode safe for Livewire: a native submit would bypass Livewire entirely and POST to the page route (typically a 405).
+
+The verified pattern:
+
+```blade
+<div>
+    {{-- No wire:submit on the form — the package intercepts the native submit --}}
+    <form id="checker-form">
+        <input type="email" wire:model="email">
+        <button id="checker-submit" type="submit" wire:loading.attr="disabled"
+            @click="if (window.captchaToken) { $event.preventDefault(); $wire.check(); }">
+            Check
+        </button>
+    </form>
+
+    <div wire:ignore>
+        <x-turnstile
+            lazy
+            form-id="checker-form"
+            container-id="ts-checker"
+            :button-ids="['checker-submit']"
+            callback="onToolCaptchaSuccess"
+        />
+    </div>
+
+    @script
+    <script>
+        window.onToolCaptchaSuccess = async (token) => {
+            // Bind the token to the public property, then run the action
+            await $wire.set('captchaToken', token);
+            await $wire.check();
+
+            // Hide the widget and reset it (tokens are single-use)
+            window.captchaToken = null;
+            const widget = document.getElementById('ts-checker');
+            if (widget) {
+                widget.style.display = 'none';
+            }
+            window.turnstileInstances?.['ts-checker']?.reset();
+        };
+    </script>
+    @endscript
+</div>
+```
+
+```php
+namespace App\Livewire;
+
+use Livewire\Component;
+
+class Index extends Component
+{
+    public string $email = '';
+    public string $captchaToken = '';
+
+    public function check(): void
+    {
+        $this->validate([
+            'email' => 'required|email',
+            'captchaToken' => 'required|turnstile',
+        ]);
+
+        // Your logic here
+    }
+}
+```
+
+Rules that make this work — don't skip any of them:
+
+1. **No `wire:submit` on the form.** Livewire's submit handler would fire the action on the tokenless first click, before the widget is even shown. The button stays `type="submit"`; tokenless clicks fall through to the package's native submit interception, which reveals and executes the widget.
+2. **Alpine token guard on the button.** Once `window.captchaToken` is set, the click is prevented from becoming a native submit and instead calls the action directly.
+3. **`wire:ignore` wrapper.** Protects the widget container and its hidden inputs from being wiped by Livewire morphs on re-render.
+4. **Always `reset()` after each check.** Turnstile tokens are single-use for siteverify; `reset()` clears the widget state and the hidden inputs so the next submit re-verifies instead of replaying a stale token.
+5. **Give each widget an explicit `container-id`** so your callback can target it reliably (hiding, resetting via the registry).
+
+#### JavaScript Instance Registry
+
+Every widget registers its controls under its container id, giving host apps a stable handle without knowing the generated instance id:
+
+```js
+const controls = window.turnstileInstances['ts-checker'];
+
+controls.reset();        // reset the widget, clear token inputs and pending flags
+controls.execute();      // programmatically run the challenge (lazy mode)
+controls.getWidgetId();  // underlying Turnstile widget id
+```
+
+Per-instance globals (`window.turnstile_<instanceId>`) are still exposed for backwards compatibility, but the registry is the recommended API — instance ids are generated with `uniqid()` and are not predictable.
 
 ## Server-side Validation
 
@@ -380,6 +469,14 @@ if (Turnstile::isConfigured()) {
 - **Check `buttonIds`** contains the correct button IDs
 - **Verify form submission** is not prevented by other JavaScript
 - **Lazy mode requires** the component to be placed outside the form element
+
+### Lazy Mode + Livewire
+
+- **Page reloads or 405s after solving the CAPTCHA** — the form is being submitted natively. With a `callback` prop present the package never submits natively (v1.1+); make sure your form has no `wire:submit` competing with the interception
+- **Action runs before the widget appears** — remove `wire:submit` from the form and use the Alpine token guard pattern from the Livewire lazy-mode section
+- **Widget breaks or disappears after a Livewire re-render** — wrap `<x-turnstile>` in a `wire:ignore` div
+- **Second submission does nothing** — call `window.turnstileInstances[containerId].reset()` after each check; tokens are single-use and a stale token blocks re-verification
+- **Token never reaches your action** — `$wire.check(token)` only works if the action accepts a parameter; otherwise bind it first with `$wire.set('captchaToken', token)` and validate the property with `required|turnstile`
 
 ### Multiple Widgets on Same Page
 

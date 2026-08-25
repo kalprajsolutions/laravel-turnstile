@@ -25,8 +25,10 @@ class ValidCloudflareTurnstile implements ValidationRule
      */
     public function validate(string $attribute, mixed $value, Closure $fail): void
     {
-        if (is_null($value)) {
+        if (is_null($value) || $value === '') {
             $fail('Blank CAPTCHA. You need to prove you are human.');
+
+            return;
         }
 
         // Request data

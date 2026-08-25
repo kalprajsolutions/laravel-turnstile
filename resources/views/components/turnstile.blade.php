@@ -224,9 +224,14 @@ $instanceId = uniqid('ts_');
                             setButtonsDisabled(false);
                         }
 
-                        // Execute custom callback if provided
+                        // Callback mode: the callback owns what happens next
+                        // (Livewire/SPA handlers) — never submit the form natively
                         if (customCallback && typeof window[customCallback] === 'function') {
+                            isVerifying = false;
+                            pendingSubmit = false;
                             window[customCallback](token);
+
+                            return;
                         }
 
                         // If lazy mode and form was pending, submit it now
@@ -331,6 +336,15 @@ $instanceId = uniqid('ts_');
                     return;
                 }
 
+                // Callback mode: hand the token to the callback instead of
+                // letting the browser POST the form (Livewire/SPA safety)
+                if (customCallback && typeof window[customCallback] === 'function') {
+                    e.preventDefault();
+                    window[customCallback](token);
+
+                    return;
+                }
+
                 // Token exists, allow normal submission
                 // But remove this handler to prevent recursion
                 const form = document.getElementById(formId);
@@ -339,6 +353,15 @@ $instanceId = uniqid('ts_');
 
             // Expose global controls for this instance
             window['turnstile_' + instanceId] = {
+                reset: resetWidget,
+                execute: executeWidget,
+                getWidgetId: () => widgetId
+            };
+
+            // Stable registry keyed by container id so host apps (Livewire,
+            // SPA) can reset a widget without knowing the generated instance id
+            window.turnstileInstances = window.turnstileInstances || {};
+            window.turnstileInstances[containerId] = {
                 reset: resetWidget,
                 execute: executeWidget,
                 getWidgetId: () => widgetId
