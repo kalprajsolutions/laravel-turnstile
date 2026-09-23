@@ -1,6 +1,5 @@
 {
     "name": "kalprajsolutions/laravel-turnstile",
-    "version": "1.1.0",
     "description": "A Laravel Blade component for Cloudflare Turnstile CAPTCHA integration",
     "type": "library",
     "license": "MIT",
