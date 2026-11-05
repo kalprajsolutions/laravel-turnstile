@@ -12,8 +12,11 @@
 [![Total Downloads](https://img.shields.io/packagist/dt/kalprajsolutions/laravel-turnstile.svg)](https://packagist.org/packages/kalprajsolutions/laravel-turnstile)
 [![Latest Version](https://img.shields.io/packagist/v/kalprajsolutions/laravel-turnstile.svg)](https://packagist.org/packages/kalprajsolutions/laravel-turnstile)
 [![Laravel](https://img.shields.io/badge/Laravel-8%2B-orange.svg)](https://laravel.com)
+[![CI](https://github.com/kalprajsolutions/laravel-turnstile/actions/workflows/ci.yml/badge.svg)](https://github.com/kalprajsolutions/laravel-turnstile/actions/workflows/ci.yml)
 
 A Laravel package for easy integration of Cloudflare Turnstile CAPTCHA into your forms. Provides a simple Blade component with both standard and lazy loading modes for optimal user experience.
+
+![Demo of laravel-turnstile: the Turnstile widget rendering in a contact form, submission verified server-side](docs/demo.gif)
 
 ## Description
 
